@@ -46,6 +46,28 @@ func (s *store) Read() {
 
 }
 
-func (s *store) Append() {
+// Append persists the given bytes to the store
+func (s *store) Append(toPersist []byte) (bytesWritten uint64, pos uint64, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
+	// get current position where the bytes will be persisted
+	pos = s.size
+
+	// write the length of the record so we know how many bytes to read later
+	if err := binary.Write(s.buf, enc, uint64(len(toPersist))); err != nil {
+		return 0, 0, err
+	}
+
+	// write to the buffered writer to reduce system calls and improve performance
+	numBytes, err := s.buf.Write(toPersist)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	numBytes += lenWidth
+	s.size += uint64(numBytes)
+	// return the number of bytes written
+	// and the position where the store holds the record (to be used for indexing)
+	return uint64(numBytes), pos, nil
 }
