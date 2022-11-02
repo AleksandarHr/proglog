@@ -42,10 +42,6 @@ func newStore(f *os.File) (*store, error) {
 	}, nil
 }
 
-func (s *store) Read() {
-
-}
-
 // Append persists the given bytes to the store
 func (s *store) Append(toPersist []byte) (bytesWritten uint64, pos uint64, err error) {
 	s.mu.Lock()
@@ -69,5 +65,55 @@ func (s *store) Append(toPersist []byte) (bytesWritten uint64, pos uint64, err e
 	s.size += uint64(numBytes)
 	// return the number of bytes written
 	// and the position where the store holds the record (to be used for indexing)
+	// At pos --> record_length (8 bytes) followed by the record data itself
 	return uint64(numBytes), pos, nil
+}
+
+func (s *store) Read(pos uint64) ([]byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// make sure to flush the writer buffer so all records are on disk
+	if err := s.buf.Flush(); err != nil {
+		return nil, err
+	}
+
+	// find out how many bytes we need to read to get the whole record
+	size := make([]byte, lenWidth)
+	if _, err := s.File.ReadAt(size, int64(pos)); err != nil {
+		return nil, err
+	}
+
+	// fetch the record of size 'size'
+	bytes := make([]byte, enc.Uint64(size))
+	if _, err := s.File.ReadAt(bytes, int64(pos+lenWidth)); err != nil {
+		return nil, err
+	}
+
+	return bytes, nil
+}
+
+// ReadAt reads len(p) bytes into p beginning at the off offset in the store's file
+func (s *store) ReadAt(p []byte, off int64) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.buf.Flush(); err != nil {
+		return 0, err
+	}
+
+	return s.File.ReadAt(p, off)
+}
+
+// Close persists any buffered data before closing the file
+func (s *store) Close() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	err := s.buf.Flush()
+	if err != nil {
+		return err
+	}
+
+	return s.File.Close()
 }
