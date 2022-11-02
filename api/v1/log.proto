@@ -1,0 +1,15 @@
+// specify to use proto3 syntax -- latest version of protobuf syntax atm
+syntax = "proto3";
+
+// specify a package name:
+    // - to be used as the package name in the generated Go code
+    // - it prevents name  clashes between protocol message types with the same name
+package log.v1;
+
+option go_package = "github.com/aleksandarhr/proglog/api/log_v1";
+
+message Record {
+    // field_type filed_name = field_ID
+    bytes value = 1;
+    uint64 offset = 2;
+}
