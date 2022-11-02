@@ -92,15 +92,18 @@ func TestStoreClose(t *testing.T) {
 	s, err := newStore(f)
 	require.NoError(t, err)
 
+	// write something to the store
 	_, _, err = s.Append(write)
 	require.NoError(t, err)
 
 	f, beforeSize, err := openFile(f.Name())
 	require.NoError(t, err)
 
+	// on closing, the store flushes the buffer to the file
 	err = s.Close()
 	require.NoError(t, err)
 
+	// after closing the store, file should contain the flushed buffer information
 	_, afterSize, err := openFile(f.Name())
 	require.NoError(t, err)
 
