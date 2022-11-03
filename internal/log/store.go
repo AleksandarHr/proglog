@@ -117,3 +117,8 @@ func (s *store) Close() error {
 
 	return s.File.Close()
 }
+
+// Name returns the store's file path
+func (s *store) Name() string {
+	return s.File.Name()
+}
